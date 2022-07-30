@@ -217,7 +217,7 @@ public:
     {}
 
     template <typename TFwd>
-        requires std::same_as<std::remove_cvref<TFwd>, T>
+        requires std::convertible_to<std::remove_cvref_t<TFwd>, T>
     composite_expected( TFwd&& val ):
         variant_( std::in_place_index<0>, std::forward<TFwd>( val ) )
     {}
@@ -262,37 +262,41 @@ public:
         return variant_.index() - 1;
     }
 
-    template <std::invocable<T> Functor>
-        requires details::is_variant_v<typename std::invoke_result_t<Functor, T>::variant_t>
-    auto then( Functor f )
+    template <typename ...Args1, typename Functor, typename ...Args2>
+        requires details::is_variant_v<typename std::invoke_result_t<Functor, Args1..., T, Args2...>::variant_t>
+    auto then( Args1&& ...args1, Functor f, Args2&& ...args2 )
     {
-        using Ret = united_t<std::invoke_result_t<Functor, T>>;
-        return *this ? united<Ret>( f( std::move( value())).variant())
+        using Ret = united_t<std::invoke_result_t<Functor, Args1..., T, Args2...>>;
+        return *this ? united<Ret>( std::invoke( f, std::forward<Args1>( args1 )..., std::move( value() ), std::forward<Args2>( args2 )... ).variant() )
                      : from_variant_t<Ret>( details::make_variant_index_t<Ret>::fromOther( variant_.index(), variant_.index(), std::move( variant_ ) ) );
     }
 
-    template <std::invocable<T> Functor>
-        requires details::is_variant_v<typename std::invoke_result_t<Functor, T>::variant_t>
-    auto then( Functor f ) const
+    template <typename ...Args1, typename Functor, typename ...Args2>
+        requires details::is_variant_v<typename std::invoke_result_t<Functor, Args1..., T, Args2...>::variant_t>
+    auto then( Args1&& ...args1, Functor f, Args2&& ...args2 ) const
     {
-        using Ret = united_t<std::invoke_result_t<Functor, T>>;
-        return *this ? united<Ret>( f( value()).variant())
+        using Ret = united_t<std::invoke_result_t<Functor, Args1..., T, Args2...>>;
+        return *this ? united<Ret>( std::invoke( f, std::forward<Args1>( args1 )..., value(), std::forward<Args2>( args2 )... ).variant() )
                      : from_variant_t<Ret>( details::make_variant_index_t<Ret>::fromOther( variant_.index(), variant_.index(), variant_ ) );
     }
 
-    template <std::invocable<T> Functor>
-    auto then( Functor f )
+    template <typename ...Args1, typename Functor, typename ...Args2>
+        requires ( std::invocable<Functor, Args1..., T, Args2...>
+            && !requires { typename std::invoke_result_t<Functor, Args1..., T, Args2...>::variant_t; } )
+    auto then( Args1&& ...args1, Functor f, Args2&& ...args2 )
     {
-        using Ret = std::variant<std::invoke_result_t<Functor, T>, Errs...>;
-        return *this ? from_variant_t<Ret>::fromVal( f( std::move( value() ) ) )
+        using Ret = std::variant<std::invoke_result_t<Functor, Args1..., T, Args2...>, Errs...>;
+        return *this ? from_variant_t<Ret>::fromVal( std::invoke( f, std::forward<Args1>( args1 )..., std::move( value() ), std::forward<Args1>( args2 )... ) )
                      : from_variant_t<Ret>( details::make_variant_index_t<Ret>::fromOther( variant_.index(), variant_.index(), std::move( variant_ ) ) );
     }
 
-    template <std::invocable<T> Functor>
-    auto then( Functor f ) const
+    template <typename ...Args1, typename Functor, typename ...Args2>
+        requires ( std::invocable<Functor, Args1..., T, Args2...>
+            && !requires { typename std::invoke_result_t<Functor, Args1..., T, Args2...>::variant_t; } )
+   auto then( Args1&& ...args1, Functor f, Args2&& ...args2 ) const
     {
-        using Ret = std::variant<std::invoke_result_t<Functor, T>, Errs...>;
-        return *this ? from_variant_t<Ret>::fromVal( f( value() ) )
+        using Ret = std::variant<std::invoke_result_t<Functor, Args1..., T, Args2...>, Errs...>;
+        return *this ? from_variant_t<Ret>::fromVal( std::invoke( f, std::forward<Args1>( args1 )..., value(), std::forward<Args2>( args2 )... ) )
                      : from_variant_t<Ret>( details::make_variant_index_t<Ret>::fromOther( variant_.index(), variant_.index(), variant_ ) );
     }
 

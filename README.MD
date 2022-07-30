@@ -61,3 +61,20 @@ containing result of invoking the functor.
 2) Otherwise, it returns new instance of `composite_expected` containing the same error.
 
 Such behaviour is possible because returned `composite_expected` is the union of all possible errors.
+Member function `then` is an extension of the `>>`, and it may take other arguments (look at the next section). 
+
+
+## Invoking functions with many arguments 
+
+Functions often take more than one argument. Suppose we have binary function
+```
+plus :: T -> T -> T 
+```
+And we want to call it after `e` of type `expected<T, ErrorType>`, passing expected value as second argument. It is possible with 
+`then` member function:
+```c++
+e.then( firstArg, plus );
+```
+
+Generally, calling `e.then( args1..., function, args2... )` will effectively `std::invoke( function, args1..., value, args2... )` where 
+`value` is value of the expected `e`.

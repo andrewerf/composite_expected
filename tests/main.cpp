@@ -8,7 +8,8 @@ template <typename T>
 composite_expected<T, const char*> sqrt( T x )
 {
     if ( x >= 0 )
-        return composite_expected<T, const char*>::fromVal( std::sqrt( x ) );
+        // implicit constructor from value
+        return std::sqrt( x );
     else
         return composite_expected<T, const char*>::fromErr( 0, "Could not take sqr-root of negative number" );
 }
@@ -20,7 +21,8 @@ TEST( composite_expected, logic )
     ASSERT_TRUE( x );
     ASSERT_EQ( x.value(), 100 );
 
-    const auto y = x >> std::bind_front( std::multiplies<>(), -2 );
+    // calling with multiple arguments
+    const auto y = x.then( std::multiplies(), -2 );
     static_assert( std::same_as<decltype( y ), const composite_expected<int, int>> );
     ASSERT_TRUE( y );
     ASSERT_EQ( y.value(), -200 );
@@ -42,13 +44,13 @@ struct MoveCopyCounter
     MoveCopyCounter() = default;
 
     MoveCopyCounter( const MoveCopyCounter& other ):
-            copied( other.copied + 1 ),
-            moved( other.moved )
+        copied( other.copied + 1 ),
+        moved( other.moved )
     {}
 
     MoveCopyCounter( MoveCopyCounter&& other ) noexcept:
-            copied( other.copied ),
-            moved( other.moved + 1 )
+        copied( other.copied ),
+        moved( other.moved + 1 )
     {}
 
     int copied = 0;
